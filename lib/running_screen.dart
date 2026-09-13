@@ -2,6 +2,7 @@ import 'package:geolocator/geolocator.dart';
 import 'location_service.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'running_engine.dart';
 
 class RunningScreen extends StatelessWidget {
   const RunningScreen({super.key});
@@ -174,24 +175,7 @@ class _LiveRunScreenState extends State<LiveRunScreen> {
   Timer? _timer;
   StreamSubscription<Position>? _positionSubscription;
 
-  int _elapsedSeconds = 0;
-  Position? _lastPosition;
-  double _totalDistance = 0;
-  double _currentSpeed = 0;
-  bool _isPaused = false;
-
-  String _formatPace() {
-    if (_currentSpeed <= 0) {
-      return '--';
-    }
-    final paceSeconds = 1000 / _currentSpeed; // seconds per km
-
-    final minutes = paceSeconds ~/ 60;
-    final seconds = paceSeconds.round() % 60;
-
-    return '${minutes.toString().padLeft(2, '0')}:'
-        '${seconds.toString().padLeft(2, '0')} min/km';
-  }
+  final _engine = RunningEngine();
 
   @override
   void initState() {
@@ -297,26 +281,8 @@ Future<void> _beginRun() async {
       (Position position) {
         if (!mounted) return;
 
-        if (_lastPosition != null && !_isPaused) {
-          // Ignore GPS readings with poor accuracy.
-          if (position.accuracy <= 15) {
-            final distance = Geolocator.distanceBetween(
-              _lastPosition!.latitude,
-              _lastPosition!.longitude,
-              position.latitude,
-              position.longitude,
-            );
-
-            // Ignore small GPS movements caused by GPS drift.
-            if (distance >= 3) {
-              _totalDistance += distance;
-              _currentSpeed = position.speed;
-            }
-          }
-        }
-
         setState(() {
-          _lastPosition = position;
+          _engine.onPositionUpdate(position);
         });
       },
     );
@@ -326,9 +292,9 @@ Future<void> _beginRun() async {
     _timer = Timer.periodic(
       const Duration(seconds: 1),
       (_) {
-        if (!_isPaused && mounted) {
+        if (mounted) {
           setState(() {
-            _elapsedSeconds++;
+            _engine.onTick();
           });
         }
       },
@@ -337,7 +303,7 @@ Future<void> _beginRun() async {
 
   void _togglePause() {
     setState(() {
-      _isPaused = !_isPaused;
+      _engine.togglePause();
     });
   }
 
@@ -349,17 +315,17 @@ Future<void> _beginRun() async {
       context,
       MaterialPageRoute(
         builder: (context) => RunSummaryScreen(
-          elapsedSeconds: _elapsedSeconds,
-          totalDistance: _totalDistance,
+          elapsedSeconds: _engine.elapsedSeconds,
+          totalDistance: _engine.totalDistance,
         ),
       ),
     );
   }
 
   String _formatTime() {
-    final hours = _elapsedSeconds ~/ 3600;
-    final minutes = (_elapsedSeconds % 3600) ~/ 60;
-    final seconds = _elapsedSeconds % 60;
+    final hours = _engine.elapsedSeconds ~/ 3600;
+    final minutes = (_engine.elapsedSeconds % 3600) ~/ 60;
+    final seconds = _engine.elapsedSeconds % 60;
 
     return '${hours.toString().padLeft(2, '0')}:'
         '${minutes.toString().padLeft(2, '0')}:'
@@ -397,9 +363,9 @@ Future<void> _beginRun() async {
               const SizedBox(height: 30),
 
               Text(
-                _isPaused ? 'PAUSED' : 'RUNNING',
+                _engine.isPaused ? 'PAUSED' : 'RUNNING',
                 style: TextStyle(
-                  color: _isPaused ? Colors.white54 : Colors.white,
+                  color: _engine.isPaused ? Colors.white54 : Colors.white,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 2,
@@ -423,7 +389,7 @@ Future<void> _beginRun() async {
                 children: [
                   Expanded(
                     child: _LiveStat(
-                      value: _formatPace(),
+                      value: _engine.formatPace(),
                       label: 'PACE',
                     ),
                   ),
@@ -444,7 +410,7 @@ Future<void> _beginRun() async {
                   Expanded(
                     child: _LiveStat(
                       value:
-                          '${(_totalDistance / 1000).toStringAsFixed(2)} km',
+                          '${(_engine.totalDistance / 1000).toStringAsFixed(2)} km',
                       label: 'DISTANCE',
                     ),
                   ),
@@ -473,7 +439,7 @@ Future<void> _beginRun() async {
                     ),
                   ),
                   child: Text(
-                    _isPaused ? 'Resume' : 'Pause',
+                    _engine.isPaused ? 'Resume' : 'Pause',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
