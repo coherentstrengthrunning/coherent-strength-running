@@ -1,30 +1,22 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:coherent_strength_running/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+  testWidgets('App smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const CoherentStrengthRunning());
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Verify text presence
+    expect(find.text('COHERENT'), findsOneWidget);
+    // "Strength Running" appears in the title.
+    expect(find.text('Strength Running'), findsAtLeastNWidgets(1));
+    expect(find.text('Train with clarity.'), findsOneWidget);
+    expect(find.text("TODAY'S SESSION"), findsOneWidget);
+    expect(find.text('Easy Run'), findsAtLeastNWidgets(1));
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify exactly one "Start Session" button.
+    expect(find.widgetWithText(ElevatedButton, 'Start Session'), findsOneWidget);
   });
 }
