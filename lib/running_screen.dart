@@ -165,7 +165,8 @@ class RunningScreen extends StatelessWidget {
 }
 
 class LiveRunScreen extends StatefulWidget {
-  const LiveRunScreen({super.key});
+  final RunningEngine? engine;
+  const LiveRunScreen({super.key, this.engine});
 
   @override
   State<LiveRunScreen> createState() => _LiveRunScreenState();
@@ -175,11 +176,12 @@ class _LiveRunScreenState extends State<LiveRunScreen> {
   Timer? _timer;
   StreamSubscription<Position>? _positionSubscription;
 
-  final _engine = RunningEngine();
+  late RunningEngine _engine;
 
   @override
   void initState() {
     super.initState();
+    _engine = widget.engine ?? RunningEngine();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _beginRun();
