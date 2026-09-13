@@ -56,12 +56,29 @@ void main() {
         expect(engine.lastPosition, pos1);
         expect(engine.totalDistance, 0);
       });
-      test('Second valid position accumulates distance', () {
-        engine.onPositionUpdate(createPos(0, 0, 10)); // Establishes last
-        // Use a position that actually yields distance (e.g., small lat change)
-        engine.onPositionUpdate(createPos(0.0001, 0, 10));
-        expect(engine.totalDistance, greaterThan(0));
-        expect(engine.lastPosition?.latitude, 0.0001);
+
+      test('Movement < 3m is ignored', () {
+        engine.onPositionUpdate(createPos(0, 0, 10)); // lastPosition = 0,0
+        // ~1.1 meters
+        engine.onPositionUpdate(createPos(0.00001, 0, 10, speed: 5.0));
+        expect(engine.totalDistance, 0);
+        expect(engine.currentSpeed, 0);
+      });
+
+      test('Movement == 3m is accepted', () {
+        engine.onPositionUpdate(createPos(0, 0, 10)); // lastPosition = 0,0
+        // ~3 meters (0.000027027 * 111000)
+        engine.onPositionUpdate(createPos(0.000027027, 0, 10, speed: 5.0));
+        expect(engine.totalDistance, greaterThanOrEqualTo(3));
+        expect(engine.currentSpeed, 5.0);
+      });
+
+      test('Movement > 3m is accepted', () {
+        engine.onPositionUpdate(createPos(0, 0, 10)); // lastPosition = 0,0
+        // ~11.1 meters
+        engine.onPositionUpdate(createPos(0.0001, 0, 10, speed: 5.0));
+        expect(engine.totalDistance, greaterThan(3));
+        expect(engine.currentSpeed, 5.0);
       });
     });
 
@@ -79,7 +96,8 @@ void main() {
 
     group('5. Speed & 6. Pace', () {
       test('Current speed reflects GPS speed', () {
-        engine.onPositionUpdate(createPos(0, 0, 10, speed: 5.5));
+        engine.onPositionUpdate(createPos(0, 0, 10)); // Establish lastPosition
+        engine.onPositionUpdate(createPos(0.0001, 0, 10, speed: 5.5)); // Move > 3m
         expect(engine.currentSpeed, 5.5);
       });
       test('Pace calculation: 5km in 30min is 06:00 min/km', () {

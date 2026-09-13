@@ -22,10 +22,12 @@ class RunningEngine {
           position.latitude,
           position.longitude,
         );
-        totalDistance += distance;
+        if (distance >= 3) {
+          totalDistance += distance;
+          currentSpeed = position.speed;
+        }
       }
       lastPosition = position;
-      currentSpeed = position.speed;
     }
   }
 
